@@ -3,6 +3,7 @@
 
 # Folders that are not necessary
 /test
-/venv
+/win-venv
+/lin-venv
 /build
 /dist
