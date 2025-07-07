@@ -1,3 +1,7 @@
-/test
+# Mac issue
 *.DS_Store
+
+# Folders that are not necessary
+/test
 /venv
+/build
