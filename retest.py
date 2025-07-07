@@ -24,7 +24,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import sys
 import binascii
-from untitled0 import *
+# from untitled0 import *
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
 from ttkbootstrap import utility
@@ -125,7 +125,7 @@ class FileSearchEngine(ttk.Frame):
         teststring = []
 
         # file loader
-        rx_data1 = np.loadtxt(self.path_var.get(), dtype=self.cast_var.get(), delimiter='\n',
+        rx_data1 = np.loadtxt(self.path_var.get(), dtype=self.cast_var.get(),
                               converters={_: lambda s: np.short(int(s, 16)) for _ in range(1)}, encoding="utf8")
 
         for y in rx_data1:  # separates the bits into highs and lows
