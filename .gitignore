@@ -1,3 +1,9 @@
+# Ignore file types
+*.exe
+*.
+!*/
+
+
 # Mac issue
 *.DS_Store
 
