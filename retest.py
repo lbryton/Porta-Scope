@@ -95,7 +95,7 @@ class FileSearchEngine(ttk.Frame):
         )
         make_btn.pack(side=LEFT, padx=5)
         option_list = ['Pick a data type', 'uint16', 'int16', 'uint32']
-        op = ttk.OptionMenu(self, self.cast_var, *option_list)
+        op = ttk.OptionMenu(self, self.cast_var, *option_list, command=self.on_typing)
         op.pack(side=RIGHT, padx=(15, 0))
     def create_term_row(self):
         """Add term row to labelframe"""
@@ -114,27 +114,43 @@ class FileSearchEngine(ttk.Frame):
         )
         search_btn.pack(side=LEFT, padx=5)
 
+    def on_typing(self, cast_var):
+        """Callback for cast type"""
+        self.cast_fn = getattr(np, cast_var)
+        return
+    
     def on_browse(self):
         """Callback for directory browse"""
         path = filedialog.askopenfilename(title="Browse")
         if path:
             self.path_var.set(path)
 
+
     def Make(self):
+        """Callback for plotting data"""
+
         a = ""
         teststring = []
 
         # file loader
-        rx_data1 = np.loadtxt(self.path_var.get(), dtype=self.cast_var.get(),
-                              converters={_: lambda s: np.short(int(s, 16)) for _ in range(1)}, encoding="utf8")
+        rx_data1 = None
+        try:
+            rx_data1 = np.loadtxt(self.path_var.get(), dtype=self.cast_var.get(), 
+                              converters={_: lambda s: self.cast_fn(s) for _ in range(1)}, encoding="utf8")
+        except ValueError as E:
+            print(f"Failed to convert: {E}")
+            return
+        except IsADirectoryError as E:
+            print(f"Path is a file: {E}")
+            return
 
         for y in rx_data1:  # separates the bits into highs and lows
             if y < 1000:
                 a += "0"
-                teststring.append(0);
+                teststring.append(0)
             else:
                 a += "1"
-                teststring.append(1);
+                teststring.append(1)
 
         arr1 = list(range(0, len(rx_data1)))
         plt.figure()
