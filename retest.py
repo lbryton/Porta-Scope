@@ -83,13 +83,13 @@ class FileSearchEngine(ttk.Frame):
         """Add path row to labelframe"""
         path_row = ttk.Frame(self.option_lf)
         path_row.pack(fill=X, expand=YES)
-        path_lbl = ttk.Label(path_row, text="Make the graph", width=8)
+        path_lbl = ttk.Label(path_row, text="Plot graph", width=8)
         path_lbl.pack(side=LEFT, padx=(15, 0))
         #path_ent = ttk.Entry(path_row, textvariable=self.path_var)
         #path_ent.pack(side=LEFT, fill=X, expand=YES, padx=5)
         make_btn = ttk.Button(
             master=path_row,
-            text="Make",
+            text="Plot",
             command=self.Make,
             width=8
         )
@@ -125,6 +125,9 @@ class FileSearchEngine(ttk.Frame):
         if path:
             self.path_var.set(path)
 
+    def show_error(self, msg):
+        messagebox.showerror("Error", msg)
+
 
     def Make(self):
         """Callback for plotting data"""
@@ -138,10 +141,13 @@ class FileSearchEngine(ttk.Frame):
             rx_data1 = np.loadtxt(self.path_var.get(), dtype=self.cast_var.get(), 
                               converters={_: lambda s: self.cast_fn(s) for _ in range(1)}, encoding="utf8")
         except ValueError as E:
-            print(f"Failed to convert: {E}")
+            self.show_error(f"Failed to convert: {E}")
             return
         except IsADirectoryError as E:
-            print(f"Path is a file: {E}")
+            self.show_error(f"Path is a file: {E}")
+            return
+        except TypeError as E:
+            self.show_error(f"Pick a data type")
             return
 
         for y in rx_data1:  # separates the bits into highs and lows
