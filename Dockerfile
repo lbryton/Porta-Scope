@@ -1,24 +1,38 @@
-# Use a lightweight base image with build tools
 FROM ubuntu:22.04
 
-# Set environment variables to make noninteractive installs cleaner
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Update and install essential packages
+# Install system dependencies
 RUN apt-get update && apt-get install -y \
-    build-essential \
-    cmake \
-    git \
-    curl \
-    vim \
-    bash \
-    unzip \ 
-    pkg-config \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+    unzip \
+    default-jre \
+    xorg \
+    libxt6 \
+    libxmu6 \
+    libxext6 \
+    libxpm4 \
+    libglu1-mesa \
+    libgtk2.0-0 \
+    libgconf-2-4 \
+    libnss3 \
+    libasound2 \
+    libsm6 \
+    libxrender1 \
+    libfontconfig1 \
+    libice6 \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Set working directory
+# Copy MCR installer into image (assume it's in the same directory as Dockerfile)
+COPY MATLAB_Runtime_R2025a_glnxa64.zip /tmp/
+
+# Unzip and install MCR
+RUN unzip /tmp/MATLAB_Runtime_R2025a_glnxa64.zip -d /tmp/mcr && \
+    /tmp/mcr/install -mode silent -agreeToLicense yes -destinationFolder /opt/mcr && \
+    rm -rf /tmp/mcr /tmp/MATLAB_Runtime_R2025a_glnxa64.zip
+
+
 WORKDIR /project
 
-# Start container in interactive bash shell
-CMD ["/bin/bash"]
+# Set environment variables for MCR
+ENV LD_LIBRARY_PATH=/opt/mcr/v99/runtime/glnxa64:/opt/mcr/v99/bin/glnxa64:/opt/mcr/v99/sys/os/glnxa64
+ENV XAPPLRESDIR=/opt/mcr/v99/X11/app-defaults
