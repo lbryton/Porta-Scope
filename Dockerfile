@@ -5,6 +5,7 @@ FROM ubuntu:22.04
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Install system dependencies
+
 RUN apt-get update && apt-get install -y \
     build-essential \
     cmake \
@@ -28,11 +29,11 @@ RUN apt-get update && apt-get install -y \
     libxrender1 \
     libfontconfig1 \
     libice6 \
-    openssh-client \ 
+    openssh-client \
     libfftw3-dev \
     pkg-config \
     doxygen \
-    zip \ 
+    zip \
     uncrustify \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
@@ -40,7 +41,6 @@ WORKDIR /project
 
 # Copy MCR installer into image (assume it's in the same directory as Dockerfile)
 COPY janus-c-3.0.5.zip /project/
-
 COPY MATLAB_Runtime_R2025a_glnxa64.zip /tmp/
 
 # Unzip and install MCR
@@ -49,8 +49,8 @@ RUN unzip /tmp/MATLAB_Runtime_R2025a_glnxa64.zip -d /tmp/mcr && \
     rm -rf /tmp/mcr /tmp/MATLAB_Runtime_R2025a_glnxa64.zip
 
 # Set environment variables for MCR
-ENV LD_LIBRARY_PATH=/opt/mcr/v99/runtime/glnxa64:/opt/mcr/v99/bin/glnxa64:/opt/mcr/v99/sys/os/glnxa64
-ENV XAPPLRESDIR=/opt/mcr/v99/X11/app-defaults
+ENV LD_LIBRARY_PATH=/opt/mcr/R2025a/runtime/glnxa64:/opt/mcr/R2025a/bin/glnxa64:/opt/mcr/R2025a/sys/os/glnxa64
+ENV XAPPLRESDIR=/opt/mcr/R2025a/X11/app-defaults
 
 # Install pyenv
 ENV PYENV_ROOT="/root/.pyenv"
