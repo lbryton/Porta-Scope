@@ -56,6 +56,7 @@ class FileSearchEngine(ttk.Frame):
 
         self.create_path_row()
         self.create_go_row()
+        self.create_demodulation_row()
         self.progressbar = ttk.Progressbar(
             master=self, 
             mode=INDETERMINATE, 
@@ -97,22 +98,9 @@ class FileSearchEngine(ttk.Frame):
         option_list = ['Pick a data type', 'uint16', 'int16', 'uint32']
         op = ttk.OptionMenu(self, self.cast_var, *option_list, command=self.on_typing)
         op.pack(side=RIGHT, padx=(15, 0))
-    def create_term_row(self):
+    def create_demodulation_row(self):
         """Add term row to labelframe"""
-        term_row = ttk.Frame(self.option_lf)
-        term_row.pack(fill=X, expand=YES, pady=15)
-        term_lbl = ttk.Label(term_row, text="Term", width=8)
-        term_lbl.pack(side=LEFT, padx=(15, 0))
-        term_ent = ttk.Entry(term_row, textvariable=self.term_var)
-        term_ent.pack(side=LEFT, fill=X, expand=YES, padx=5)
-        search_btn = ttk.Button(
-            master=term_row, 
-            text="Search", 
-            command=self.on_search, 
-            bootstyle=OUTLINE, 
-            width=8
-        )
-        search_btn.pack(side=LEFT, padx=5)
+        demod_row = ttk.Frame(self.option_lf)
 
     def on_typing(self, cast_var):
         """Callback for cast type"""

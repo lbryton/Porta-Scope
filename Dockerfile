@@ -36,3 +36,16 @@ WORKDIR /project
 # Set environment variables for MCR
 ENV LD_LIBRARY_PATH=/opt/mcr/v99/runtime/glnxa64:/opt/mcr/v99/bin/glnxa64:/opt/mcr/v99/sys/os/glnxa64
 ENV XAPPLRESDIR=/opt/mcr/v99/X11/app-defaults
+
+# Install pyenv
+ENV PYENV_ROOT="/root/.pyenv"
+ENV PATH="$PYENV_ROOT/bin:$PATH"
+
+RUN curl https://pyenv.run | bash && \
+    echo 'export PYENV_ROOT="$HOME/.pyenv"' >> /root/.bashrc && \
+    echo 'export PATH="$PYENV_ROOT/bin:$PATH"' >> /root/.bashrc && \
+    echo 'eval "$(pyenv init --path)"' >> /root/.bashrc && \
+    echo 'eval "$(pyenv init -)"' >> /root/.bashrc && \
+    echo 'eval "$(pyenv virtualenv-init -)"' >> /root/.bashrc
+
+CMD ["/bin/bash"]
