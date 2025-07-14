@@ -52,6 +52,7 @@ class FileSearchEngine(ttk.Frame):
 
         self.create_path_row()
         self.create_go_row()
+        self.create_demodulation_row()
         self.progressbar = ttk.Progressbar(
             master=self, 
             mode=INDETERMINATE, 
@@ -79,50 +80,59 @@ class FileSearchEngine(ttk.Frame):
         """Add path row to labelframe"""
         path_row = ttk.Frame(self.option_lf)
         path_row.pack(fill=X, expand=YES)
-        path_lbl = ttk.Label(path_row, text="Make the graph", width=8)
+        path_lbl = ttk.Label(path_row, text="Plot graph", width=8)
         path_lbl.pack(side=LEFT, padx=(15, 0))
         #path_ent = ttk.Entry(path_row, textvariable=self.path_var)
         #path_ent.pack(side=LEFT, fill=X, expand=YES, padx=5)
         make_btn = ttk.Button(
             master=path_row,
-            text="Make",
+            text="Plot",
             command=self.Make,
             width=8
         )
         make_btn.pack(side=LEFT, padx=5)
         option_list = ['Pick a data type', 'uint16', 'int16', 'uint32']
-        op = ttk.OptionMenu(self, self.cast_var, *option_list)
+        op = ttk.OptionMenu(self, self.cast_var, *option_list, command=self.on_typing)
         op.pack(side=RIGHT, padx=(15, 0))
-    def create_term_row(self):
+    def create_demodulation_row(self):
         """Add term row to labelframe"""
-        term_row = ttk.Frame(self.option_lf)
-        term_row.pack(fill=X, expand=YES, pady=15)
-        term_lbl = ttk.Label(term_row, text="Term", width=8)
-        term_lbl.pack(side=LEFT, padx=(15, 0))
-        term_ent = ttk.Entry(term_row, textvariable=self.term_var)
-        term_ent.pack(side=LEFT, fill=X, expand=YES, padx=5)
-        search_btn = ttk.Button(
-            master=term_row, 
-            text="Search", 
-            command=self.on_search, 
-            bootstyle=OUTLINE, 
-            width=8
-        )
-        search_btn.pack(side=LEFT, padx=5)
+        demod_row = ttk.Frame(self.option_lf)
 
+    def on_typing(self, cast_var):
+        """Callback for cast type"""
+        self.cast_fn = getattr(np, cast_var)
+        return
+    
     def on_browse(self):
         """Callback for directory browse"""
         path = filedialog.askopenfilename(title="Browse")
         if path:
             self.path_var.set(path)
 
+    def show_error(self, msg):
+        messagebox.showerror("Error", msg)
+
+
     def Make(self):
+        """Callback for plotting data"""
+
         a = ""
         teststring = []
 
         # file loader
-        rx_data1 = np.loadtxt(self.path_var.get(), dtype=self.cast_var.get(),
-                              converters={_: lambda s: np.short(int(s, 16)) for _ in range(1)}, encoding="utf8")
+        rx_data1 = None
+        try:
+            rx_data1 = np.loadtxt(self.path_var.get(), dtype=self.cast_var.get(), 
+                              converters={_: lambda s: self.cast_fn(s) for _ in range(1)}, encoding="utf8")
+        except ValueError as E:
+            self.show_error(f"Failed to convert: {E}")
+            return
+        except IsADirectoryError as E:
+            self.show_error(f"Path is a file: {E}")
+            return
+        except TypeError as E:
+            self.show_error(f"Pick a data type")
+            return
 
         for y in rx_data1:  # separates the bits into highs and lows
             if y < 1000:
