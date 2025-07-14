@@ -25,10 +25,6 @@ import matplotlib.patches as mpatches
 import sys
 import binascii
 # from untitled0 import *
-import ttkbootstrap as ttk
-from ttkbootstrap.constants import *
-from ttkbootstrap import utility
-from tkinter.filedialog import askdirectory
 from tkinter import filedialog
 
 
@@ -131,10 +127,10 @@ class FileSearchEngine(ttk.Frame):
         for y in rx_data1:  # separates the bits into highs and lows
             if y < 1000:
                 a += "0"
-                teststring.append(0);
+                teststring.append(0)
             else:
                 a += "1"
-                teststring.append(1);
+                teststring.append(1)
 
         arr1 = list(range(0, len(rx_data1)))
         plt.figure()
