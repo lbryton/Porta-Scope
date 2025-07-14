@@ -1,5 +1,5 @@
 # Use a lightweight base image with build tools
-FROM ubuntu:22.04
+FROM python:3.12-slim
 
 # Set environment variables to make noninteractive installs cleaner
 ENV DEBIAN_FRONTEND=noninteractive
@@ -8,6 +8,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y \
     build-essential \
+    python3-tk tk-dev libx11-dev libxft-dev libxext-dev \
     cmake \
     git \
     curl \
@@ -51,16 +52,5 @@ RUN unzip /tmp/MATLAB_Runtime_R2025a_glnxa64.zip -d /tmp/mcr && \
 # Set environment variables for MCR
 ENV LD_LIBRARY_PATH=/opt/mcr/R2025a/runtime/glnxa64:/opt/mcr/R2025a/bin/glnxa64:/opt/mcr/R2025a/sys/os/glnxa64
 ENV XAPPLRESDIR=/opt/mcr/R2025a/X11/app-defaults
-
-# Install pyenv
-ENV PYENV_ROOT="/root/.pyenv"
-ENV PATH="$PYENV_ROOT/bin:$PATH"
-
-RUN curl https://pyenv.run | bash && \
-    echo 'export PYENV_ROOT="$HOME/.pyenv"' >> /root/.bashrc && \
-    echo 'export PATH="$PYENV_ROOT/bin:$PATH"' >> /root/.bashrc && \
-    echo 'eval "$(pyenv init --path)"' >> /root/.bashrc && \
-    echo 'eval "$(pyenv init -)"' >> /root/.bashrc && \
-    echo 'eval "$(pyenv virtualenv-init -)"' >> /root/.bashrc
 
 CMD ["/bin/bash"]
