@@ -1,8 +1,10 @@
 # Ignore file types
-*.exe
+*.spec
 *.
 !*/
 *.zip
+*.csv
+
 
 
 # Mac issue
