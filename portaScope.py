@@ -29,6 +29,7 @@ import binascii
 
 import subprocess
 import os
+import platform
 
 
 class JanusKey(ttk.Frame):
@@ -256,9 +257,12 @@ if __name__ == '__main__':
     JanusKey(app)
     app.update_idletasks()
 
-
     if os.name == 'posix':
-        app.after(100, lambda: app.wm_attributes("-zoomed", True))
+        if os.uname().machine.lower() == 'arm64':
+            app.after(100, lambda: app.state("zoomed"))
+            app.minsize(600,600)
+        else:
+            app.after(100, lambda: app.wm_attributes("-zoomed", True))
     elif os.name == 'nt':
         app.after(100, lambda: app.state("zoomed"))
         app.minsize(600,600)
