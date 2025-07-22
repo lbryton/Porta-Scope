@@ -69,6 +69,7 @@ class JanusKey(ttk.Frame):
         # Janus frame
         self.sections[1].config(text="Janus Demodulation")
         self.janus_sector(self.sections[1])
+        self.compact = False
 
         # Bind configurations
         self.master.after_idle(lambda: self.master.bind("<Configure>", self.on_configure))
@@ -189,24 +190,31 @@ class JanusKey(ttk.Frame):
 
     def update_height(self, width, height):
         if (width <= 775 or height <= 600):
-            if not self.sections[0].winfo_ismapped():
-                self.sections[0].grid(row=0,column=0, columnspan=2, sticky="ew",padx=10, pady=10)
-            self.sections[1].grid(row=1, column=0, sticky=NSEW, columnspan=2, rowspan=2)
-            if self.sections[2].winfo_ismapped():
-                self.sections[2].grid_remove()
-            if self.sections[3].winfo_ismapped():
-                self.sections[3].grid_remove()
-            if self.sections[4].winfo_ismapped():
-                self.sections[4].grid_remove()
-        else:
+            if not self.compact:
+                if not self.sections[0].winfo_ismapped():
+                    self.sections[0].grid(row=0,column=0, columnspan=2, sticky="ew",padx=10, pady=10)
+                self.sections[1].grid(row=1, column=0, sticky=NSEW, columnspan=2, rowspan=2)
+                if self.sections[2].winfo_ismapped():
+                    self.sections[2].grid_remove()
+                if self.sections[3].winfo_ismapped():
+                    self.sections[3].grid_remove()
+                if self.sections[4].winfo_ismapped():
+                    self.sections[4].grid_remove()
+                self.compact = True
+
+                # Force the GUI to refresh
+                self.update_idletasks()
+        elif self.compact:
+
             for i in range(5):
                 if self.sections[i].winfo_ismapped():
                     self.sections[i].grid_remove()
             for i in range(4):
                 self.sections[i+1].grid(row=i%2+1, column=i//2, columnspan=1, rowspan=1, sticky=NSEW, padx=10, pady=10)
+            self.compact= False
         
-        # Force the GUI to refresh
-        self.update_idletasks()
+            # Force the GUI to refresh
+            self.update_idletasks()
         # self.update()
 
             
