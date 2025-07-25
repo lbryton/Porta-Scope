@@ -30,6 +30,7 @@ import binascii
 import subprocess
 import os
 import platform
+from pathlib import Path
 
 
 class JanusKey(ttk.Frame):
@@ -47,6 +48,8 @@ class JanusKey(ttk.Frame):
         self.prev_width = self.master.winfo_width()
         self.cnt = 0
         self.current_selection = 1
+
+        self.processing_janus = False
 
         # Setup 2x2 grid inside this frame + header on 
         # top when decreasing window size
@@ -123,7 +126,7 @@ class JanusKey(ttk.Frame):
 
         # Add janus path row to labelframe 
         self.janus_path_var = ttk.StringVar(value=_path)
-        self.create_path_browser(section, "Janus Path (file/dir)", self.janus_path_var)
+        self.create_path_browser(section, "Janus Path (file/dir)", self.janus_path_var, include_dir=True)
         
 
         # # Add config path row to labelframe 
@@ -144,23 +147,32 @@ class JanusKey(ttk.Frame):
     ## Helper functions ##
 
     # Creates path browser pack row
-    def create_path_browser(self, master, text, text_var):
+    def create_path_browser(self, master, text, text_var, include_dir=False):
         # Instantiating widgets
         row = ttk.Frame(master)
         row_label = ttk.Label(row, text=text, width=15)
         row_entry = ttk.Entry(row, textvariable=text_var, width=10)
         
-        row_btn = ttk.Button(
+        file_btn = ttk.Button(
             master=row, 
-            text="Browse", 
-            command=lambda path_type=text_var: self.on_path_browse(path_type), 
+            text="File", 
+            command=lambda path_type=text_var: self.on_file_browse(path_type), 
+            width=8
+        )
+        if include_dir:
+            dir_btn = ttk.Button(
+            master=row, 
+            text="Folder", 
+            command=lambda path_type=text_var: self.on_folder_browse(path_type), 
             width=8
         )
         # Row orientation
         row.pack(fill=X, expand=NO, anchor=N, pady=(0,5))
         row_label.pack(side=LEFT, padx=3)
         row_entry.pack(side=LEFT, fill=X, expand=YES, padx=3)
-        row_btn.pack(side=LEFT, padx=3)
+        file_btn.pack(side=LEFT, padx=3)
+        if include_dir:
+            dir_btn.pack(side=LEFT, padx=3)
         return row_entry
     
     # Setup buttons to actually run janus
@@ -217,15 +229,6 @@ class JanusKey(ttk.Frame):
             self.update_idletasks()
         # self.update()
 
-            
-
-            # if not self.sections[2].winfo_ismapped():
-            #     self.sections[2].grid(row=1, column=1, sticky=NSEW, padx=10, pady=10)
-            # if not self.sections[3].winfo_ismapped():
-            #     self.sections[3].grid(row=2, column=0, sticky=NSEW, padx=10, pady=10)
-            # if not self.sections[4].winfo_ismapped():
-            #     self.sections[4].grid(row=2, column=1, sticky=NSEW, padx=10, pady=10)
-
     ### Call back functions ###
 
     # Call back for any window events
@@ -261,9 +264,14 @@ class JanusKey(ttk.Frame):
 
 
     # Callback for path browsing
-    def on_path_browse(self, path_var):
+    def on_file_browse(self, path_var):
         """Callback for directory browse"""
-        path = filedialog.askopenfilename(title="Browse")
+        path = filedialog.askopenfilename(title="File Browse")
+        if path:
+            path_var.set(path)
+    def on_folder_browse(self, path_var):
+        """Callback for directory browse"""
+        path = filedialog.askdirectory(title="Folder Browse")
         if path:
             path_var.set(path)
 
@@ -273,9 +281,17 @@ class JanusKey(ttk.Frame):
             
     # Call back to run janus
     def on_janus_run(self):
+        
+        if os.path.isdir(self.csv_path_var.get()) or not self.csv_path_var.get().endswith('.csv'):
+            print("Please pick an output file with .csv")
+            return
         if not isinstance(self.file_type_var, str):
             print("Please pick a file type")
             return
+        if self.processing_janus:
+            print("still processing")
+            return
+        self.processing_janus = True
 
         # Path to the C executable bundled with your Python app
         if getattr(sys, 'frozen', False):
@@ -293,38 +309,91 @@ class JanusKey(ttk.Frame):
                 exe_path = './porta-janus-lin/janus-rx'
             elif os.name == 'nt':
                 exe_path = './porta-janus-win/janus-rx.exe'
-        run_arr = [exe_path, 
-                    "--pset-file", str(self.pset_path_var.get()),
-                    "--config-file", str(self.config_path_var.get()),
-                    "--stream-driver", str(self.file_type_var),
-                    "--stream-driver-args", str(self.janus_path_var.get())
-                  ]
-        result = subprocess.run(run_arr, 
-                                capture_output=True, text=True)
-        if result.returncode == 0:
-            self.janus_out(result.stderr)
-        else:
-            print(result.returncode)
-            print("error: \n", result.stderr)
-    def janus_out(self, result:str):
+
+        thread = Thread(target=self.run_subprocess,
+                        args=(exe_path, self.janus_path_var.get(), 
+                                self.pset_path_var.get(), self.file_type_var, 
+                                self.config_path_var.get(), self.csv_path_var.get()))
+        thread.start()
+            
+    def run_subprocess(self, exe_path, janus_path, pset_path, file_type, config_path, csv_path):
+        if os.path.isdir(janus_path):
+            print("test1")
+            folder = Path(janus_path)  # or just 'path/to/folder'
+            wav_files = list(folder.glob('*.wav'))
+            print(len(wav_files))
+            for wav_file in wav_files:
+                run_arr = [exe_path, 
+                    "--pset-file", str(pset_path),
+                    "--config-file", str(config_path),
+                    "--stream-driver", str(file_type),
+                    "--stream-driver-args", str(wav_file)
+                            ] 
+                result = subprocess.run(run_arr, 
+                                    capture_output=True, text=True)
+                if result.returncode == 0:
+                    self.janus_out(result.stderr, os.path.basename(wav_file), csv_path)
+                else:
+                    print(result.returncode)
+                    print("error: \n", result.stderr)
+        elif os.path.isfile(janus_path):
+            print("test2")
+            run_arr = [exe_path, 
+            "--pset-file", str(pset_path),
+            "--config-file", str(config_path),
+            "--stream-driver", str(file_type),
+            "--stream-driver-args", str(janus_path)
+                    ]
+            result = subprocess.run(run_arr, 
+                                    capture_output=True, text=True)
+            if result.returncode == 0:
+                self.janus_out(result.stderr, os.path.basename(janus_path), csv_path)
+            else:
+                print(result.returncode)
+                print("error: \n", result.stderr)
+        self.processing_janus = False
+
+
+    def janus_out(self, result:str, file_name, out_csv):
         in_payload = 0
-        data = ""
         detect_time = 0.0
-        with open("example.csv", "w") as file:
+        with open(out_csv, "a+") as file:
+            # determine whether to write file is new or already has data
+            file.seek(0)
+            contents = file.read()
+            if not contents:
+                file.write("File,Timestamp,payload,error,SINR\n")
+
+            # Setting up parameters
+            in_payload = False
+            detect_time = 0
+            payload_data = ""
             janout = result.split("\n")
-            file.write("Timestamp,payload,error,SINR\n")
+
+            # Iterates through data
             for line in janout:
-                print(line)
+                payload_cnt = 0
                 if line.startswith('-> Triggering detection'):
                     detect_time = line.split(" ")[3][1:-1]
-                    in_payload = 1
-                if in_payload and line.find("Application Data") != -1:
-                    data = line.split(":")[2][1:]
-                    file.write(f"{str(detect_time)},{data}\n")
-                    in_payload = 0
+                    if in_payload:
+                        file.write(f"{file_name},{str(detect_time)},{payload_data}\n")
+                        payload_data = ""
+                        payload_cnt += 1
+                    in_payload = True
+                elif line.startswith('-> Invalid Packet CRC') and in_payload:
+                    in_payload = False
+                    payload_cnt +=1
+                    file.write(f"{file_name},{str(detect_time)},,Invalid Packet CRC\n")
 
-
-
+                elif in_payload and line.find("Application Data") != -1:
+                    packet_data = line.split(":")[2][1:]
+                    payload_data += chr(int(packet_data,2))
+            
+            if in_payload:
+                if payload_data != "":
+                    file.write(f"{file_name},{str(detect_time)},{payload_data}\n")
+                else:
+                    file.write(f"{file_name},{str(detect_time)},,No data\n")
 
 def on_closing():
     if messagebox.askokcancel("Quit", "Do you want to quit?"):
