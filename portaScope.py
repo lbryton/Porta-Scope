@@ -31,6 +31,7 @@ import subprocess
 import os
 import platform
 from pathlib import Path
+import math
 
 
 class JanusKey(ttk.Frame):
@@ -317,41 +318,46 @@ class JanusKey(ttk.Frame):
         thread.start()
             
     def run_subprocess(self, exe_path, janus_path, pset_path, file_type, config_path, csv_path):
-        if os.path.isdir(janus_path):
-            print("test1")
-            folder = Path(janus_path)  # or just 'path/to/folder'
-            wav_files = list(folder.glob('*.wav'))
-            print(len(wav_files))
-            for wav_file in wav_files:
+        try:
+            if os.path.isdir(janus_path):
+                print("test1")
+                folder = Path(janus_path)  # or just 'path/to/folder'
+                wav_files = list(folder.glob('*.wav'))
+                print(len(wav_files))
+                for wav_file in wav_files:
+                    run_arr = [exe_path, 
+                        "--pset-file", str(pset_path),
+                        "--config-file", str(config_path),
+                        "--stream-driver", str(file_type),
+                        "--stream-driver-args", str(wav_file)
+                                ] 
+                    result = subprocess.run(run_arr, 
+                                        capture_output=True, text=True)
+                    if result.returncode == 0:
+                        self.janus_out(result.stderr, os.path.basename(wav_file), csv_path)
+                    else:
+                        print(result.returncode)
+                        print("error: \n", result.stderr)
+            elif os.path.isfile(janus_path):
+                print("test2")
                 run_arr = [exe_path, 
-                    "--pset-file", str(pset_path),
-                    "--config-file", str(config_path),
-                    "--stream-driver", str(file_type),
-                    "--stream-driver-args", str(wav_file)
-                            ] 
+                "--pset-file", str(pset_path),
+                "--config-file", str(config_path),
+                "--stream-driver", str(file_type),
+                "--stream-driver-args", str(janus_path)
+                        ]
                 result = subprocess.run(run_arr, 
-                                    capture_output=True, text=True)
+                                        capture_output=True, text=True)
                 if result.returncode == 0:
-                    self.janus_out(result.stderr, os.path.basename(wav_file), csv_path)
+                    self.janus_out(result.stderr, os.path.basename(janus_path), csv_path)
                 else:
                     print(result.returncode)
                     print("error: \n", result.stderr)
-        elif os.path.isfile(janus_path):
-            print("test2")
-            run_arr = [exe_path, 
-            "--pset-file", str(pset_path),
-            "--config-file", str(config_path),
-            "--stream-driver", str(file_type),
-            "--stream-driver-args", str(janus_path)
-                    ]
-            result = subprocess.run(run_arr, 
-                                    capture_output=True, text=True)
-            if result.returncode == 0:
-                self.janus_out(result.stderr, os.path.basename(janus_path), csv_path)
-            else:
-                print(result.returncode)
-                print("error: \n", result.stderr)
-        self.processing_janus = False
+        except Exception as E: 
+            print(E)
+        finally:
+          self.processing_janus = False
+          print("done")
 
 
     def janus_out(self, result:str, file_name, out_csv):
@@ -362,38 +368,47 @@ class JanusKey(ttk.Frame):
             file.seek(0)
             contents = file.read()
             if not contents:
-                file.write("File,Timestamp,payload,error,SINR\n")
+                file.write("File,Detect,payload time,payload,payload size,snr,error\n")
 
             # Setting up parameters
             in_payload = False
-            detect_time = 0
+            detect_time = ""
+            payload_time = ""
             payload_data = ""
+            payload_size = ""
+            snr = ""
             janout = result.split("\n")
 
             # Iterates through data
             for line in janout:
                 payload_cnt = 0
                 if line.startswith('-> Triggering detection'):
-                    detect_time = line.split(" ")[3][1:-1]
-                    if in_payload:
-                        file.write(f"{file_name},{str(detect_time)},{payload_data}\n")
+                    if in_payload and payload_data != "":
+                        file.write(f"{file_name},{str(detect_time)},{payload_time},{payload_data},{payload_size},{snr}\n")
                         payload_data = ""
+                        payload_size = ""
+                        snr = ""
                         payload_cnt += 1
+                    elif in_payload:
+                        file.write(f"{file_name},{str(detect_time)},,,,{snr},No data\n")
+                    detect_time = line.split(" ")[3][1:-1]
                     in_payload = True
-                elif line.startswith('-> Invalid Packet CRC') and in_payload:
-                    in_payload = False
-                    payload_cnt +=1
-                    file.write(f"{file_name},{str(detect_time)},,Invalid Packet CRC\n")
 
-                elif in_payload and line.find("Application Data") != -1:
-                    packet_data = line.split(":")[2][1:]
-                    payload_data += chr(int(packet_data,2))
+                elif in_payload:
+                    if "SNR" in line:
+                        snr = line.split(":")[2][1:]
+                    elif "After (s)" in line:
+                        payload_time = line.split(":")[2][1:]
+                    elif "Payload Size" in line:
+                        payload_size = line.split(":")[2][1:]
+                    elif "Payload" in line:
+                        payload_data = line.split(":")[2][1:]
             
             if in_payload:
                 if payload_data != "":
-                    file.write(f"{file_name},{str(detect_time)},{payload_data}\n")
+                    file.write(f"{file_name},{str(detect_time)},{payload_time},{payload_data},{payload_size},{snr}\n")
                 else:
-                    file.write(f"{file_name},{str(detect_time)},,No data\n")
+                    file.write(f"{file_name},{str(detect_time)},,,,{snr},No data\n")
 
 def on_closing():
     if messagebox.askokcancel("Quit", "Do you want to quit?"):
