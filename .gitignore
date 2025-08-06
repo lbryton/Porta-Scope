@@ -21,3 +21,5 @@
 /config
 /startup
 /data
+/blur
+__pycache__
