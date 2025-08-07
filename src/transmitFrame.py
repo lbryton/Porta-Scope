@@ -53,7 +53,9 @@ class TransmitFrame(ttk.Labelframe):
         self.port_addr = ttk.StringVar(value="5000")
         self.create_ip_addr(section, "Server Port", self.port_addr)
 
-        self.transmit_file(section)
+        option_list = ['Pick gain', '1','2','3','4','5','6','7']
+        self.tx_gain = ttk.StringVar(value='1')
+        self.transmit_file(section, self.tx_gain,option_list)
 
     # Create path browser row for GUI
     def create_path_browser(self, master, text, text_var, include_dir=False):
@@ -98,7 +100,7 @@ class TransmitFrame(ttk.Labelframe):
         return row_entry
     
     # Creates row to transmit file
-    def transmit_file(self, master):
+    def transmit_file(self, master, stringVar, option_list):
         row = ttk.Frame(master)
         row.pack(fill=X, expand=NO, anchor=N, pady=(0,5))
         run_btn = ttk.Button(
@@ -107,39 +109,49 @@ class TransmitFrame(ttk.Labelframe):
             command=self.on_transmit_run,
             width=8
         )
+        gain_options = ttk.OptionMenu(row, stringVar, *option_list, bootstyle= INFO, 
+                                            command=self.on_typing)
+        
         run_btn.pack(side=RIGHT, padx=3)
+        gain_options.pack(side=RIGHT, padx=3)
 
     ### HANDLER FUNCTION ###
 
     # Handles when transmit button is pressed
     def on_transmit_run(self):
       # File checking and checking if ports are fine
-      if os.path.isfile(self.transmit_path_var.get()) == False:
-          return
-      else:
-        transmit_file = self.transmit_path_var.get()
-      if not self.port_addr.get().isdigit():
-          return
-      else:
-          server_port = int(self.port_addr.get())
-      try:
-          ipaddress.ip_address(self.ip_addr.get())
-          server_ip = self.ip_addr.get()
-      except ValueError:
-          return
-    
-      print(f"Attempting to connect to:\tPort: {server_port}; ipaddr: {server_ip}")
+        if os.path.isfile(self.transmit_path_var.get()) == False:
+            return
+        else:
+            transmit_file = self.transmit_path_var.get()
 
-      # Lock to prevent multiple connections to server at once
-      if self.transmitting_data.acquire_lock(blocking=False):
-          thread = Thread(target=self.handle_to_server, args=(server_ip, server_port, transmit_file))
-          thread.daemon = True
-          thread.start()
-      else:
-          print("Still transmitting data")
+        if not self.port_addr.get().isdigit():
+            return
+        else:
+            server_port = int(self.port_addr.get())
+
+        if not self.tx_gain.get().isdigit():
+            return
+        else:
+            tx_gain = self.tx_gain.get()
+        try:
+            ipaddress.ip_address(self.ip_addr.get())
+            server_ip = self.ip_addr.get()
+        except ValueError:
+            return
     
+        print(f"Attempting to connect to:\tPort: {server_port}; ipaddr: {server_ip}")
+
+        # Lock to prevent multiple connections to server at once
+        if self.transmitting_data.acquire_lock(blocking=False):
+            thread = Thread(target=self.handle_to_server, args=(server_ip, server_port, transmit_file, tx_gain))
+            thread.daemon = True
+            thread.start()
+        else:
+            print("Still transmitting data")
+        
     # Handles connection/interactions with server
-    def handle_to_server(self, server_ip, server_port, transmit_file):
+    def handle_to_server(self, server_ip, server_port, transmit_file, tx_gain):
         # Create TCP socket to connect to server
         client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
@@ -155,7 +167,9 @@ class TransmitFrame(ttk.Labelframe):
                 print("Can now write to server")
 
                 file_size = os.path.getsize(transmit_file)
-                client_socket.sendall(str(file_size).encode())
+                header = str(file_size) + ";" + tx_gain
+                print(f"Header: {header}")
+                client_socket.sendall(header.encode())
                 print(file_size)
                 
                 # TODO: Handle when bytes sent is not the actual file size
@@ -167,8 +181,9 @@ class TransmitFrame(ttk.Labelframe):
                         if curr_sent == 0:
                             break
                         bytes_sent += curr_sent
+                print(f"{bytes_sent}, {type(bytes_sent)}, {file_size}, {type(file_size)}")
                 if bytes_sent != file_size:
-                    print("File failed to send through properly")
+                    print(f"File failed to send through properly; sent: {bytes_sent}")
                 client_socket.shutdown(socket.SHUT_WR)
             else:
                 print("Failed to connect")
@@ -189,3 +204,5 @@ class TransmitFrame(ttk.Labelframe):
         path = filedialog.askdirectory(title="Folder Browse")
         if path:
             path_var.set(path)
+    def on_typing(self, gain_var):
+        self.tx_gain = ttk.StringVar(value=gain_var)
