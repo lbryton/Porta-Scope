@@ -112,30 +112,6 @@ class JanusFrame(ttk.Labelframe):
         parameter_options.pack(side=RIGHT, padx=3)
         help_btn.pack(side=RIGHT, padx=3)
 
-    def file_type_run(self, master, option_list):
-        # Instantiating widgets
-        row = ttk.Frame(master)
-        row.pack(fill=X, expand=NO, anchor=N, pady=(0,5))
-        parameter_options = ttk.OptionMenu(row, self.file_type_var, 
-                                            *option_list, bootstyle= INFO, 
-                                            command=self.on_typing)
-        parameter_btn = ttk.Button(
-            master=row, 
-            text="Run", 
-            command=self.on_janus_run, 
-            width=8
-        )
-        help_btn = ttk.Button(
-            master=row, 
-            text="Help", 
-            command=None, 
-            width=8
-        )
-        # Row orientation
-        parameter_btn.pack(side=RIGHT, padx=3)
-        parameter_options.pack(side=RIGHT, padx=3)
-        help_btn.pack(side=RIGHT, padx=3)
-
     def on_file_browse(self, path_var):
         """Callback for directory browse"""
         path = filedialog.askopenfilename(title="File Browse")

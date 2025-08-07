@@ -135,6 +135,7 @@ class PortaScope(ttk.Frame):
             # Force the GUI to refresh
             self.update_idletasks()
 
+
     ### Call back functions ###
 
     # Call back for any window events
@@ -173,6 +174,7 @@ def on_closing():
     if messagebox.askokcancel("Quit", "Do you want to quit?"):
         app.quit()
         app.destroy()
+
 
 # Runs program
 if __name__ == '__main__':

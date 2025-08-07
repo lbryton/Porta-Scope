@@ -29,11 +29,16 @@ from tkinter import filedialog
 
 # Frame to transmit file through TCP/IP and run commands
 class TransmitFrame(ttk.Labelframe):
+
+    # Initalization of frame and connection lock
     def __init__(self, master:ttk.Frame):
         super().__init__(master)
         self.transmit_sector(master)
         self.transmitting_data = Lock()
 
+    ### GUI SETUP ###
+
+    # Set up for GUI (calls required builder functions)
     def transmit_sector(self, section):
         _path = Path().absolute().as_posix()
         self.file_type_var = ttk.StringVar(value='wav')
@@ -50,6 +55,7 @@ class TransmitFrame(ttk.Labelframe):
 
         self.transmit_file(section)
 
+    # Create path browser row for GUI
     def create_path_browser(self, master, text, text_var, include_dir=False):
         # Instantiating widgets
         row = ttk.Frame(master)
@@ -78,6 +84,7 @@ class TransmitFrame(ttk.Labelframe):
             dir_btn.pack(side=LEFT, padx=3)
         return row_entry
 
+    # Create textbox for server port/ip
     def create_ip_addr(self, master, text, text_var):
         # Instantiating widgets
         row = ttk.Frame(master)
@@ -90,6 +97,7 @@ class TransmitFrame(ttk.Labelframe):
         row_entry.pack(side=LEFT, fill=X, expand=YES, padx=3)
         return row_entry
     
+    # Creates row to transmit file
     def transmit_file(self, master):
         row = ttk.Frame(master)
         row.pack(fill=X, expand=NO, anchor=N, pady=(0,5))
@@ -101,6 +109,9 @@ class TransmitFrame(ttk.Labelframe):
         )
         run_btn.pack(side=RIGHT, padx=3)
 
+    ### HANDLER FUNCTION ###
+
+    # Handles when transmit button is pressed
     def on_transmit_run(self):
       # File checking and checking if ports are fine
       if os.path.isfile(self.transmit_path_var.get()) == False:
@@ -118,18 +129,22 @@ class TransmitFrame(ttk.Labelframe):
           return
     
       print(f"Attempting to connect to:\tPort: {server_port}; ipaddr: {server_ip}")
+
+      # Lock to prevent multiple connections to server at once
       if self.transmitting_data.acquire_lock(blocking=False):
           thread = Thread(target=self.handle_to_server, args=(server_ip, server_port, transmit_file))
+          thread.daemon = True
           thread.start()
       else:
           print("Still transmitting data")
     
+    # Handles connection/interactions with server
     def handle_to_server(self, server_ip, server_port, transmit_file):
         # Create TCP socket to connect to server
         client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
         # TODO: Check if this is worth setting up
-        # client_socket.settimeout(5.0)
+        client_socket.settimeout(5.0)
         try:
             # Try connecting to server
             client_socket.connect((server_ip, server_port))
@@ -138,11 +153,22 @@ class TransmitFrame(ttk.Labelframe):
             data = client_socket.recv(1024).decode()
             if "Continue" == data:
                 print("Can now write to server")
+
+                file_size = os.path.getsize(transmit_file)
+                client_socket.sendall(str(file_size).encode())
+                print(file_size)
+                
                 # TODO: Handle when bytes sent is not the actual file size
                 with open(transmit_file, "rb") as f:
-                    
-                    bytes_sent = client_socket.sendfile(f)
+                    bytes_sent = 0
+                    while bytes_sent != file_size:
 
+                        curr_sent = client_socket.sendfile(f)
+                        if curr_sent == 0:
+                            break
+                        bytes_sent += curr_sent
+                if bytes_sent != file_size:
+                    print("File failed to send through properly")
                 client_socket.shutdown(socket.SHUT_WR)
             else:
                 print("Failed to connect")
@@ -152,14 +178,14 @@ class TransmitFrame(ttk.Labelframe):
             client_socket.close()
             self.transmitting_data.release_lock()
         
-
+    # Pulls up file system for ease of locating file
     def on_file_browse(self, path_var):
-        """Callback for directory browse"""
         path = filedialog.askopenfilename(title="File Browse")
         if path:
             path_var.set(path)
+
+    # Pulls up file system for ease of locating directory
     def on_folder_browse(self, path_var):
-        """Callback for directory browse"""
         path = filedialog.askdirectory(title="Folder Browse")
         if path:
             path_var.set(path)

@@ -5,7 +5,7 @@
 *.zip
 *.csv
 *.env
-
+.python-version
 
 
 # Mac issue
