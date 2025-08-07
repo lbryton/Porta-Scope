@@ -5,32 +5,36 @@ Created on Thu Aug 10 13:58:35 2023
 @author: lbryton
 """
 
+# Basic libraries
+from pathlib import Path
+import sys
+import subprocess
+import os
+
+
+
+# Threading/Concurrency Libraries
+from threading import Thread, Lock
+
+# Plotting library
+import matplotlib
+matplotlib.use('TkAgg')
+
+# TKinter Libraries
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
 from tkinter import filedialog
-
-import pathlib
-from threading import Thread
-import sys
-import matplotlib
-matplotlib.use('TkAgg')
-import datetime
-import pathlib
-import sys
-
-import subprocess
-import os
-from pathlib import Path
 
 
 class JanusFrame(ttk.Labelframe):
     def __init__(self, master:ttk.Frame):
         super().__init__(master)
         self.janus_sector(master)
+        self.processing_janus = Lock()
 
 
     def janus_sector(self, section):
-        _path = pathlib.Path().absolute().as_posix()
+        _path = Path().absolute().as_posix()
         self.file_type_var = ttk.StringVar(value='wav')
 
 
@@ -108,32 +112,6 @@ class JanusFrame(ttk.Labelframe):
         parameter_options.pack(side=RIGHT, padx=3)
         help_btn.pack(side=RIGHT, padx=3)
 
-    def update_height(self, width, height):
-        if (width <= 775 or height <= 600):
-            if not self.compact:
-                if not self.sections[0].winfo_ismapped():
-                    self.sections[0].grid(row=0,column=0, columnspan=2, sticky="ew",padx=10, pady=10)
-
-                for i in range(1,5):
-                    if self.sections[i].winfo_ismapped() and self.current_selection != i:
-                        self.sections[i].grid_remove()
-                    else:
-                        self.sections[i].grid(row=1, column=0, sticky=NSEW, columnspan=2, rowspan=2)
-                self.compact = True
-
-                # Force the GUI to refresh
-                self.update_idletasks()
-        elif self.compact:
-            for i in range(5):
-                if self.sections[i].winfo_ismapped():
-                    self.sections[i].grid_remove()
-            for i in range(4):
-                self.sections[i+1].grid(row=i%2+1, column=i//2, columnspan=1, rowspan=1, sticky=NSEW, padx=10, pady=10)
-            self.compact= False
-        
-            # Force the GUI to refresh
-            self.update_idletasks()
-
     def file_type_run(self, master, option_list):
         # Instantiating widgets
         row = ttk.Frame(master)
@@ -170,17 +148,15 @@ class JanusFrame(ttk.Labelframe):
             path_var.set(path)
 
     def on_janus_run(self):
-        
         if os.path.isdir(self.csv_path_var.get()) or not self.csv_path_var.get().endswith('.csv'):
             print("Please pick an output file with .csv")
             return
         if not isinstance(self.file_type_var, str):
             print("Please pick a file type")
             return
-        if self.processing_janus:
+        if not self.processing_janus.acquire_lock(blocking=False):
             print("still processing")
             return
-        self.processing_janus = True
 
         # Path to the C executable bundled with your Python app
         if getattr(sys, 'frozen', False):
@@ -195,9 +171,9 @@ class JanusFrame(ttk.Labelframe):
         else:
             # Running as normal python script (not bundled)
             if os.name == 'posix':
-                exe_path = '../porta-janus-lin/janus-rx'
+                exe_path = './porta-janus-lin/janus-rx'
             elif os.name == 'nt':
-                exe_path = '../porta-janus-win/janus-rx.exe'
+                exe_path = './porta-janus-win/janus-rx.exe'
 
         thread = Thread(target=self.run_subprocess,
                         args=(exe_path, self.janus_path_var.get(), 
@@ -244,7 +220,7 @@ class JanusFrame(ttk.Labelframe):
         except Exception as E: 
             print(E)
         finally:
-          self.processing_janus = False
+          self.processing_janus.release_lock()
           print("done")
 
     def janus_out(self, result:str, file_name, out_csv):

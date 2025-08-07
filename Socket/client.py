@@ -13,7 +13,7 @@ try:
     data = client_socket.recv(1024).decode()
     if "Continue" == data:
         print("passed")
-        with open("./Socket/TX_192k.wav", "rb") as f:
+        with open("./Socket/client.py", "rb") as f:
             bytes_sent = client_socket.sendfile(f)
 
         # Close the socket, everthing else is dealt with by the server

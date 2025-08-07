@@ -5,39 +5,24 @@ Created on Thu Aug 10 13:58:35 2023
 @author: danie
 """
 
-import ttkbootstrap as ttk
-from ttkbootstrap.constants import *
-from ttkbootstrap import utility
-from tkinter import messagebox, filedialog
-from tkinter import Event as TKEvent
-from tkinter.filedialog import askdirectory
-
-import datetime
-import pathlib
-from queue import Queue
-from threading import Thread
+# Basic import libraries
+import os
 import sys
+
+# Ploting
 import matplotlib
 matplotlib.use('TkAgg')
-import datetime
-import pathlib
-import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
-import sys
-import binascii
 
-import subprocess
-import os
-import platform
-from pathlib import Path
-import math
+# TKinter imports
+import ttkbootstrap as ttk
+from ttkbootstrap.constants import *
+from tkinter import Event as TKEvent, messagebox
+
+# Frames
 from janusFrame import JanusFrame
+from transmitFrame import TransmitFrame
 
-
-class JanusKey(ttk.Frame):
-    queue = Queue()
-    searching = False
+class PortaScope(ttk.Frame):
 
     def __init__(self, master:ttk.Frame):
         super().__init__(master, padding=15)
@@ -50,8 +35,6 @@ class JanusKey(ttk.Frame):
         self.prev_width = self.master.winfo_width()
         self.cnt = 0
         self.current_selection = 1
-
-        self.processing_janus = False
 
         # Setup 2x2 grid inside this frame + header on 
         # top when decreasing window size
@@ -76,8 +59,8 @@ class JanusKey(ttk.Frame):
         JanusFrame(self.sections[1])
 
         # Transmit Frame
-        # self.sections[2].config(text="Transmit Signal")
-        # self.transmit_sector(self.sections[2])
+        self.sections[2].config(text="Transmit Signal")
+        TransmitFrame(self.sections[2])
 
 
         # Bind configurations
@@ -86,7 +69,7 @@ class JanusKey(ttk.Frame):
         self.master.after(50, lambda: self.update_height(self.master.winfo_width(), self.master.winfo_height()))
 
 
-
+    # Creates small header when size is too small
     def mini_sector(self):
         sector_row = ttk.Frame(self)
         sector_row.grid(row=0,column=0, columnspan=2, sticky="ew",padx=10, pady=5)
@@ -125,38 +108,7 @@ class JanusKey(ttk.Frame):
         
         return sector_row
 
-    ### Creating Frames in each section of the grid ###
-    
-
-    # def transmit_sector(self, section):
-    #     _path = pathlib.Path().absolute().as_posix()
-    #     self.file_type_var = ttk.StringVar(value='wav')
-
-    #     # Add janus path row to labelframe 
-    #     self.transmit_path_var = ttk.StringVar(value=_path)
-    #     self.create_path_browser(section, "Janus Path (file/dir)", self.transmit_path_var)
-
-    #     self.ip_addr = ttk.StringVar(value="10.0.0.0")
-    #     self.create_ip_addr(section, "IP address", self.ip_addr)
-
-    #     pass
-    ## Helper functions ##
-
-    # Creates path browser pack row
-    
-    # def create_ip_addr(self, master, text, text_var):
-    #     # Instantiating widgets
-    #     row = ttk.Frame(master)
-    #     row_label = ttk.Label(row, text=text, width=15)
-    #     row_entry = ttk.Entry(row, textvariable=text_var, width=10)
-        
-    #     # Row orientation
-    #     row.pack(fill=X, expand=NO, anchor=N, pady=(0,5))
-    #     row_label.pack(side=LEFT, padx=3)
-    #     row_entry.pack(side=LEFT, fill=X, expand=YES, padx=3)
-    #     return row_entry
-    
-
+    # Change from compact form to expanded form and vice versa
     def update_height(self, width, height):
         if (width <= 775 or height <= 600):
             if not self.compact:
@@ -189,9 +141,9 @@ class JanusKey(ttk.Frame):
     def on_configure(self, event:TKEvent):
         # Check if the event comes from the window
         if event.widget == self.master:
+            
             # Check if the height/width is updated
             if event.widget.winfo_width() != self.prev_width or event.widget.winfo_height() != self.prev_height:
-                # self.current_selection = 1
                 print(f"size_update {self.cnt}")
                 self.cnt += 1
                 self.prev_height = event.widget.winfo_height()
@@ -216,12 +168,13 @@ class JanusKey(ttk.Frame):
         self.update_idletasks()
         self.update()
             
-
+# Message when excaping program
 def on_closing():
     if messagebox.askokcancel("Quit", "Do you want to quit?"):
         app.quit()
         app.destroy()
 
+# Runs program
 if __name__ == '__main__':
     app = ttk.Window("Porta-Scope", "solar")
     app.protocol("WM_DELETE_WINDOW", on_closing)
@@ -229,7 +182,7 @@ if __name__ == '__main__':
 
     app.bind("<Escape>", lambda e: on_closing())
 
-    JanusKey(app)
+    PortaScope(app)
     app.update_idletasks()
 
     if os.name == 'posix':
