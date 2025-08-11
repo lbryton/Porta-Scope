@@ -1,4 +1,4 @@
-all:
+linux:
 	pyinstaller --onefile --collect-submodules PIL --hidden-import=PIL._tkinter_finder \
 			--add-data=./porta-janus-lin:. portaScope.py
 

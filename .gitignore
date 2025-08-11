@@ -1,9 +1,9 @@
 # Ignore file types
 *.spec
-# *.
-# !*/
+*.
+!*/
 *.zip
-*.csv
+# *.csv
 *.env
 .python-version
 
