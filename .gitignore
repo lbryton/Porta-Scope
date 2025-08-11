@@ -1,7 +1,7 @@
 # Ignore file types
 *.spec
-*.
-!*/
+# *.
+# !*/
 *.zip
 *.csv
 *.env
