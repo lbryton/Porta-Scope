@@ -11,7 +11,6 @@ MAX_GAIN = 7
 MIN_GAIN = 1
 
 def handle_client(conn, addr):
-    print(f"New connection from {addr}")
     conn.sendall("Continue".encode())
     total_len = 0
 
@@ -48,12 +47,10 @@ def handle_client(conn, addr):
                 while True:
                     data = conn.recv(1024)
                     if not data:
-                        print(f"Connection closed by {addr}")
                         break
                     f.write(data)
                     total_len += len(data)
     except Exception as E:
-        print(E)
         tx_lock.release_lock()
         return
 
@@ -64,10 +61,6 @@ def handle_client(conn, addr):
         run_file = file_path
         subprocess.run([exec_file, f"--tx-file={run_file}", "--tx-gain="+gain])
         subprocess.run(["rm", file_path])
-
-        print("Done")
-    else:
-        print("Failed, did not recieve whole file")
     tx_lock.release_lock()
 def start_server():
     # Set up server
@@ -76,20 +69,14 @@ def start_server():
     server_socket.bind((SERVER_IP, SERVER_PORT))
     server_socket.listen(5)
 
-    print(f"Server listening on {SERVER_IP}:{SERVER_PORT}")
-
     while True:
-        print("Waiting for a new connection...")
         conn, addr = server_socket.accept()
 
         # Only handle one client at a time
         if tx_lock.acquire_lock(blocking=False):
-            
             # Punt client onto a new thread
             thread = threading.Thread(target=handle_client, args=(conn, addr))
             thread.start()
-
-            print("Ready for the next client.")
         else: 
             conn.sendall("Failed to run".encode())
             conn.close()
