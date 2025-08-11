@@ -58,7 +58,7 @@ class TransmitFrame(ttk.Labelframe):
         self.transmit_file(section, self.tx_gain,option_list)
 
     # Create path browser row for GUI
-    def create_path_browser(self, master, text, text_var, include_dir=False):
+    def create_path_browser(self, master, text, text_var):
         # Instantiating widgets
         row = ttk.Frame(master)
         row_label = ttk.Label(row, text=text, width=15)
@@ -70,20 +70,12 @@ class TransmitFrame(ttk.Labelframe):
             command=lambda path_type=text_var: self.on_file_browse(path_type), 
             width=8
         )
-        if include_dir:
-            dir_btn = ttk.Button(
-            master=row, 
-            text="Folder", 
-            command=lambda path_type=text_var: self.on_folder_browse(path_type), 
-            width=8
-        )
+
         # Row orientation
         row.pack(fill=X, expand=NO, anchor=N, pady=(0,5))
         row_label.pack(side=LEFT, padx=3)
         row_entry.pack(side=LEFT, fill=X, expand=YES, padx=3)
         file_btn.pack(side=LEFT, padx=3)
-        if include_dir:
-            dir_btn.pack(side=LEFT, padx=3)
         return row_entry
 
     # Create textbox for server port/ip
@@ -157,7 +149,6 @@ class TransmitFrame(ttk.Labelframe):
 
         # TODO: Check if this is worth setting up
         client_socket.settimeout(5.0)
-        
         try:
             # Try connecting to server
             client_socket.connect((server_ip, server_port))
@@ -165,19 +156,19 @@ class TransmitFrame(ttk.Labelframe):
             # Server will send data if it is busy at the moment (if it is, we stop)
             data = client_socket.recv(64).decode()
             if "Continue" == data:
-                print("Can now write to server")
+                print("Writing to server")
 
                 # Get file size and gain for header
                 file_size = os.path.getsize(transmit_file)
-                header = str(file_size) + ";" + tx_gain
-                print(f"Header: {header}")
+                header = f"{file_size};{tx_gain}"
+                # print(f"Header: {header}")
                 client_socket.sendall(header.encode())
-                print(file_size)
+                # print(file_size)
 
                 # Wait for server acknowledgement of header
                 ack = client_socket.recv(64).decode()
                 if ack != "Ok":
-                    self.transmitting_data.release_lock()
+                    # self.transmitting_data.release_lock()
                     return
                 
                 # Send over file data
@@ -189,12 +180,13 @@ class TransmitFrame(ttk.Labelframe):
                         if curr_sent == 0:
                             break
                         bytes_sent += curr_sent
-                print(f"{bytes_sent}, {type(bytes_sent)}, {file_size}, {type(file_size)}")
                 if bytes_sent != file_size:
                     print(f"File failed to send through properly; sent: {bytes_sent}")
                 client_socket.shutdown(socket.SHUT_WR)
             else:
-                print("Failed to connect")
+                print("Server in use")
+        except socket.timeout:
+            print("Connection attempt failed")
         except Exception as E:
           print(f"Error {E}")
         finally:
