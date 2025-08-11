@@ -157,22 +157,30 @@ class TransmitFrame(ttk.Labelframe):
 
         # TODO: Check if this is worth setting up
         client_socket.settimeout(5.0)
+        
         try:
             # Try connecting to server
             client_socket.connect((server_ip, server_port))
 
             # Server will send data if it is busy at the moment (if it is, we stop)
-            data = client_socket.recv(1024).decode()
+            data = client_socket.recv(64).decode()
             if "Continue" == data:
                 print("Can now write to server")
 
+                # Get file size and gain for header
                 file_size = os.path.getsize(transmit_file)
                 header = str(file_size) + ";" + tx_gain
                 print(f"Header: {header}")
                 client_socket.sendall(header.encode())
                 print(file_size)
+
+                # Wait for server acknowledgement of header
+                ack = client_socket.recv(64).decode()
+                if ack != "Ok":
+                    self.transmitting_data.release_lock()
+                    return
                 
-                # TODO: Handle when bytes sent is not the actual file size
+                # Send over file data
                 with open(transmit_file, "rb") as f:
                     bytes_sent = 0
                     while bytes_sent != file_size:
