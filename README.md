@@ -14,6 +14,7 @@ A GUI that provides access to demodulation of Janus log files and transmission o
 4. Create single file executables using `make linux` or `make windows` to make Linux and Windows executables respectively.
 
 ## File structure
+
 ```
 Porta-Scope/
 ├── configs/                # Example Janus configurations for demodulation
