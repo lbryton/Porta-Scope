@@ -25,15 +25,15 @@ matplotlib.use('TkAgg')
 # TKinter Libraries
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
-from tkinter import filedialog
+from tkinter import filedialog, messagebox
 
 # Frame to transmit file through TCP/IP and run commands
 class TransmitFrame(ttk.Labelframe):
 
     # Initalization of frame and connection lock
     def __init__(self, master:ttk.Frame):
-        super().__init__(master)
-        self.transmit_sector(master)
+        super().__init__(master, text="Transmit Signal")
+        self.transmit_sector(self)
         self.transmitting_data = Lock()
 
     ### GUI SETUP ###
@@ -113,24 +113,32 @@ class TransmitFrame(ttk.Labelframe):
     def on_transmit_run(self):
       # File checking and checking if ports are fine
         if os.path.isfile(self.transmit_path_var.get()) == False:
+            self.show_message("Please provide a file to transmit")
             return
         else:
             transmit_file = self.transmit_path_var.get()
 
+        try:
+            ipaddress.ip_address(self.ip_addr.get())
+            server_ip = self.ip_addr.get()
+        except ValueError:
+            self.show_message("IP address should be written as #.#.#.# with # ranging from 0 to 255")
+            return
+        except Exception as E:
+            self.on_except(E)
+            return
+        
         if not self.port_addr.get().isdigit():
+            self.show_message("Server port should be a digit")
             return
         else:
             server_port = int(self.port_addr.get())
 
         if not self.tx_gain.get().isdigit():
+            self.show_message("Gain should be a digit")
             return
         else:
             tx_gain = self.tx_gain.get()
-        try:
-            ipaddress.ip_address(self.ip_addr.get())
-            server_ip = self.ip_addr.get()
-        except ValueError:
-            return
     
         print(f"Attempting to connect to:\tPort: {server_port}; ipaddr: {server_ip}")
 
@@ -140,7 +148,7 @@ class TransmitFrame(ttk.Labelframe):
             thread.daemon = True
             thread.start()
         else:
-            print("Still transmitting data")
+            self.show_message("Still transmitting data")
         
     # Handles connection/interactions with server
     def handle_to_server(self, server_ip, server_port, transmit_file, tx_gain):
@@ -181,14 +189,14 @@ class TransmitFrame(ttk.Labelframe):
                             break
                         bytes_sent += curr_sent
                 if bytes_sent != file_size:
-                    print(f"File failed to send through properly; sent: {bytes_sent}")
+                    self.show_message(f"File failed to send through properly; sent= {bytes_sent}; file size= {file_size}")
                 client_socket.shutdown(socket.SHUT_WR)
             else:
-                print("Server in use")
+                self.show_message("Server in use")
         except socket.timeout:
-            print("Connection attempt failed")
+            self.show_message("Connection attempt failed. Issue - Timeout")
         except Exception as E:
-          print(f"Error {E}")
+            self.on_except(E)
         finally:
             client_socket.close()
             self.transmitting_data.release_lock()
@@ -206,3 +214,15 @@ class TransmitFrame(ttk.Labelframe):
             path_var.set(path)
     def on_typing(self, gain_var):
         self.tx_gain = ttk.StringVar(value=gain_var)
+
+    def show_message(self,msg):
+        """
+        Displays a message window with the provided string.
+        """
+        messagebox.showinfo("Information", msg)
+
+    def on_except(self, E):
+        """
+        Displays an error window with the provided string.
+        """
+        messagebox.showerror("Error", str(E))

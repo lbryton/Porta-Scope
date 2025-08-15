@@ -48,20 +48,24 @@ class PortaScope(ttk.Frame):
         self.sections = []
         header_frame = self.mini_sector()
         self.sections.append(header_frame)
-        for i in range(1,3):
+
+        # Janus frame
+        # self.sections[1].config(text="Janus Demodulation")
+        jF = JanusFrame(self)
+        jF.grid(row=1, column=0, sticky=NSEW, padx=10, pady=10)
+        self.sections.append(jF)
+
+        # Transmit Frame
+        tF = TransmitFrame(self)
+        tF.grid(row=2, column=0, sticky=NSEW, padx=10, pady=10)
+        self.sections.append(tF)
+
+        # Used as filler, once actually filled, will remove
+        for i in range(2,3):
             for j in range(2):
                 frame = ttk.Labelframe(self, text=f"Default: Section {(i-1)*2 + j + 1}", padding=10)
                 frame.grid(row=i, column=j, sticky=NSEW, padx=10, pady=10)
                 self.sections.append(frame)
-
-        # Janus frame
-        self.sections[1].config(text="Janus Demodulation")
-        JanusFrame(self.sections[1])
-
-        # Transmit Frame
-        self.sections[2].config(text="Transmit Signal")
-        TransmitFrame(self.sections[2])
-
 
         # Bind configurations
         self.compact = False

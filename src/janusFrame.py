@@ -23,13 +23,13 @@ matplotlib.use('TkAgg')
 # TKinter Libraries
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
-from tkinter import filedialog
+from tkinter import filedialog, messagebox
 
 
 class JanusFrame(ttk.Labelframe):
     def __init__(self, master:ttk.Frame):
-        super().__init__(master)
-        self.janus_sector(master)
+        super().__init__(master, text="Janus Demodulation")
+        self.janus_sector(self)
         self.processing_janus = Lock()
 
 
@@ -124,14 +124,29 @@ class JanusFrame(ttk.Labelframe):
             path_var.set(path)
 
     def on_janus_run(self):
+
+        # Check if we have a config file
+        if os.path.isdir(self.config_path_var.get()) or not self.config_path_var.get().endswith('.conf'):
+            self.show_message("Please pick an config file with .conf")
+            return
+        
+        # Check if we have a parameter set file
+        if os.path.isdir(self.pset_path_var.get()) or not self.pset_path_var.get().endswith('.csv'):
+            self.show_message("Please pick an parameter set with .csv")
+            return
+        
+        # Check if we have an output file
         if os.path.isdir(self.csv_path_var.get()) or not self.csv_path_var.get().endswith('.csv'):
-            print("Please pick an output file with .csv")
+            self.show_message("Please pick an output file with .csv")
             return
+        
+        # Check if we have 
         if not isinstance(self.file_type_var, str):
-            print("Please pick a file type")
+            self.show_message("Please pick a file type")
             return
+        
         if not self.processing_janus.acquire_lock(blocking=False):
-            print("still processing")
+            self.show_message("Still processing")
             return
 
         # Path to the C executable bundled with your Python app
@@ -160,10 +175,12 @@ class JanusFrame(ttk.Labelframe):
     def run_subprocess(self, exe_path, janus_path, pset_path, file_type, config_path, csv_path):
         try:
             if os.path.isdir(janus_path):
-                print("test1")
                 folder = Path(janus_path)  # or just 'path/to/folder'
                 wav_files = list(folder.glob('*.wav'))
-                print(len(wav_files))
+
+                # TODO: Do something with wav_files for progress bar
+
+
                 for wav_file in wav_files:
                     run_arr = [exe_path, 
                         "--pset-file", str(pset_path),
@@ -174,12 +191,13 @@ class JanusFrame(ttk.Labelframe):
                     result = subprocess.run(run_arr, 
                                         capture_output=True, text=True)
                     if result.returncode == 0:
+                        print(result.stderr)
+                        print(result.stdout)
                         self.janus_out(result.stderr, os.path.basename(wav_file), csv_path)
                     else:
                         print(result.returncode)
                         print("error: \n", result.stderr)
             elif os.path.isfile(janus_path):
-                print("test2")
                 run_arr = [exe_path, 
                 "--pset-file", str(pset_path),
                 "--config-file", str(config_path),
@@ -194,7 +212,7 @@ class JanusFrame(ttk.Labelframe):
                     print(result.returncode)
                     print("error: \n", result.stderr)
         except Exception as E: 
-            print(E)
+            self.on_except(E)
         finally:
           self.processing_janus.release_lock()
           print("done")
@@ -251,3 +269,15 @@ class JanusFrame(ttk.Labelframe):
     # Callback for updating file type
     def on_typing(self, file_type_var):
         self.file_type_var = file_type_var
+
+    def show_message(self,msg):
+        """
+        Displays a message window with the provided string.
+        """
+        messagebox.showinfo("Information", msg)
+
+    def on_except(self, E):
+        """
+        Displays an error window with the provided string.
+        """
+        messagebox.showerror("Error", str(E))
