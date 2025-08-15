@@ -7,13 +7,9 @@ Created on Thu Aug 10 13:58:35 2023
 
 # Basic libraries
 from pathlib import Path
-import sys
-import subprocess
 import os
 import socket
 import ipaddress
-
-
 
 # Threading/Concurrency Libraries
 from threading import Thread, Lock
@@ -29,38 +25,50 @@ from tkinter import filedialog, messagebox
 
 # Frame to transmit file through TCP/IP and run commands
 class TransmitFrame(ttk.Labelframe):
+    """
+    Creates LabelFrame for transmitting file to server. The server will then interpret file as signal and transmit that signal
+    """
 
     # Initalization of frame and connection lock
     def __init__(self, master:ttk.Frame):
         super().__init__(master, text="Transmit Signal")
-        self.transmit_sector(self)
+        self.transmit_sector()
         self.transmitting_data = Lock()
 
-    ### GUI SETUP ###
+    ### Frame/Widget Instantiation ###
 
     # Set up for GUI (calls required builder functions)
-    def transmit_sector(self, section):
+    def transmit_sector(self):
+        """
+        Fill in the Transmit frame to get port and IP address to send file over to
+        """
         _path = Path().absolute().as_posix()
         self.file_type_var = ttk.StringVar(value='wav')
 
         # Add janus path row to labelframe 
         self.transmit_path_var = ttk.StringVar(value=_path)
-        self.create_path_browser(section, "Transmit File", self.transmit_path_var)
+        self.create_path_browser("Transmit File", self.transmit_path_var)
 
         self.ip_addr = ttk.StringVar(value="10.0.0.0")
-        self.create_ip_addr(section, "IP address", self.ip_addr)
+        self.create_ip_addr("IP address", self.ip_addr)
 
         self.port_addr = ttk.StringVar(value="5000")
-        self.create_ip_addr(section, "Server Port", self.port_addr)
+        self.create_ip_addr("Server Port", self.port_addr)
 
         option_list = ['Pick gain', '1','2','3','4','5','6','7']
         self.tx_gain = ttk.StringVar(value='1')
-        self.transmit_file(section, self.tx_gain,option_list)
+        self.transmit_file(self.tx_gain,option_list)
 
     # Create path browser row for GUI
-    def create_path_browser(self, master, text, text_var):
+    def create_path_browser(self, text, text_var):
+        """
+        Creates a frame row to capture input file (and directory)
+        - text: Descriptor text of the row
+        - text_var: Variable to store file/directory path
+        - include_dir: Flag whether or not to include search for directory
+        """
         # Instantiating widgets
-        row = ttk.Frame(master)
+        row = ttk.Frame(self)
         row_label = ttk.Label(row, text=text, width=15)
         row_entry = ttk.Entry(row, textvariable=text_var, width=10)
         
@@ -79,9 +87,14 @@ class TransmitFrame(ttk.Labelframe):
         return row_entry
 
     # Create textbox for server port/ip
-    def create_ip_addr(self, master, text, text_var):
+    def create_ip_addr(self, text, text_var):
+        """
+        Creates a frame row to capture input port/ IP address
+        - text: Descriptor text of the row
+        - text_var: Variable to store text
+        """
         # Instantiating widgets
-        row = ttk.Frame(master)
+        row = ttk.Frame(self)
         row_label = ttk.Label(row, text=text, width=15)
         row_entry = ttk.Entry(row, textvariable=text_var, width=10)
         
@@ -92,8 +105,13 @@ class TransmitFrame(ttk.Labelframe):
         return row_entry
     
     # Creates row to transmit file
-    def transmit_file(self, master, stringVar, option_list):
-        row = ttk.Frame(master)
+    def transmit_file(self, stringVar, option_list):
+        """
+        Sets up row to run Janus demodulation and a guide on how to use the Janus frame
+        - stringVar: 
+        - option_list: Available options to pick from in a drop down menu
+        """
+        row = ttk.Frame(self)
         row.pack(fill=X, expand=NO, anchor=N, pady=(0,5))
         run_btn = ttk.Button(
             master=row,
@@ -111,7 +129,9 @@ class TransmitFrame(ttk.Labelframe):
 
     # Handles when transmit button is pressed
     def on_transmit_run(self):
-      # File checking and checking if ports are fine
+        """
+        Checks to make sure all input variables are valid, then creates a new thread to run file transmission
+        """
         if os.path.isfile(self.transmit_path_var.get()) == False:
             self.show_message("Please provide a file to transmit")
             return
@@ -152,6 +172,13 @@ class TransmitFrame(ttk.Labelframe):
         
     # Handles connection/interactions with server
     def handle_to_server(self, server_ip, server_port, transmit_file, tx_gain):
+        """
+        Comunicates with server for ability to send file. If possible, send file, and disconnect socket
+        - server_ip: Server IP
+        - server_port: Server Port
+        - transmit_file: File to be transmitted and ran on server side
+        - tx_gain: Gain of how strong the sever should transmit the TX wave
+        """
         # Create TCP socket to connect to server
         client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
@@ -203,16 +230,20 @@ class TransmitFrame(ttk.Labelframe):
         
     # Pulls up file system for ease of locating file
     def on_file_browse(self, path_var):
+        """
+        Callback for file browse
+        - path_var: the variable to update with the file path
+        """
         path = filedialog.askopenfilename(title="File Browse")
         if path:
             path_var.set(path)
 
     # Pulls up file system for ease of locating directory
-    def on_folder_browse(self, path_var):
-        path = filedialog.askdirectory(title="Folder Browse")
-        if path:
-            path_var.set(path)
     def on_typing(self, gain_var):
+        """
+        Callback for updating gain
+        - gain_var: The new gain value
+        """
         self.tx_gain = ttk.StringVar(value=gain_var)
 
     def show_message(self,msg):

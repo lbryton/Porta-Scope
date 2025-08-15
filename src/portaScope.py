@@ -23,6 +23,9 @@ from janusFrame import JanusFrame
 from transmitFrame import TransmitFrame
 
 class PortaScope(ttk.Frame):
+    """
+    Creates 2x2 frame for transmitting and demodulating recieved signals
+    """
 
     def __init__(self, master:ttk.Frame):
         super().__init__(master, padding=15)
@@ -72,9 +75,10 @@ class PortaScope(ttk.Frame):
         self.master.after_idle(lambda: self.master.bind("<Configure>", self.on_configure))
         self.master.after(50, lambda: self.update_height(self.master.winfo_width(), self.master.winfo_height()))
 
-
-    # Creates small header when size is too small
     def mini_sector(self):
+        """
+        Creates header for compact mode
+        """
         sector_row = ttk.Frame(self)
         sector_row.grid(row=0,column=0, columnspan=2, sticky="ew",padx=10, pady=5)
         sector_row.columnconfigure(0, weight=1)
@@ -112,8 +116,14 @@ class PortaScope(ttk.Frame):
         
         return sector_row
 
-    # Change from compact form to expanded form and vice versa
+    ### Call back functions ###
+
     def update_height(self, width, height):
+        """
+        Callback function when window size is updated. Updates to normal and compact mode when needed
+        - width: Current width of window
+        - height: Current height of window
+        """
         if (width <= 775 or height <= 600):
             if not self.compact:
                 if not self.sections[0].winfo_ismapped():
@@ -139,24 +149,11 @@ class PortaScope(ttk.Frame):
             # Force the GUI to refresh
             self.update_idletasks()
 
-
-    ### Call back functions ###
-
-    # Call back for any window events
-    def on_configure(self, event:TKEvent):
-        # Check if the event comes from the window
-        if event.widget == self.master:
-            
-            # Check if the height/width is updated
-            if event.widget.winfo_width() != self.prev_width or event.widget.winfo_height() != self.prev_height:
-                print(f"size_update {self.cnt}")
-                self.cnt += 1
-                self.prev_height = event.widget.winfo_height()
-                self.prev_width = event.widget.winfo_width()
-                self.update_height(self.prev_width, self.prev_height)
-
-    # Call back to update selected window when in compact mode
     def select_window(self, select_window):
+        """
+        Call back function for selecting the window displayed in compact mode
+        - select_window: Window selected to be displayed
+        """
         if self.current_selection == select_window:
             return
         print(select_window)
@@ -172,16 +169,38 @@ class PortaScope(ttk.Frame):
         # Force the GUI to refresh
         self.update_idletasks()
         self.update()
+
+    ### Handler functions ###
+
+    def on_configure(self, event:TKEvent):
+        """
+        Event handler when the window is updated. Currently looks only for width and height changes
+        - event: All of the events of the Frame
+        """
+        # Check if the event comes from the window
+        if event.widget == self.master:
             
-# Message when excaping program
+            # Check if the height/width is updated
+            if event.widget.winfo_width() != self.prev_width or event.widget.winfo_height() != self.prev_height:
+                print(f"size_update {self.cnt}")
+                self.cnt += 1
+                self.prev_height = event.widget.winfo_height()
+                self.prev_width = event.widget.winfo_width()
+                self.update_height(self.prev_width, self.prev_height)
+            
 def on_closing():
+    """
+    Callback when escaping program
+    """
     if messagebox.askokcancel("Quit", "Do you want to quit?"):
         app.quit()
         app.destroy()
 
 
-# Runs program
 if __name__ == '__main__':
+    """
+    Runs program from main
+    """
     app = ttk.Window("Porta-Scope", "solar")
     app.protocol("WM_DELETE_WINDOW", on_closing)
     app.geometry("%dx%d" % (600, 600))

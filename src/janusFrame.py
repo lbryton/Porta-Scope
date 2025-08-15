@@ -11,8 +11,6 @@ import sys
 import subprocess
 import os
 
-
-
 # Threading/Concurrency Libraries
 from threading import Thread, Lock
 
@@ -27,40 +25,58 @@ from tkinter import filedialog, messagebox
 
 
 class JanusFrame(ttk.Labelframe):
+    """
+    Creates LabelFrame for Janus demodulation
+    """
+
+    # Initalization of frame and connection lock
     def __init__(self, master:ttk.Frame):
         super().__init__(master, text="Janus Demodulation")
-        self.janus_sector(self)
+        self.janus_sector()
         self.processing_janus = Lock()
+        self.progress_bar = None
 
+    ### Frame/Widget Instantiation ###
 
-    def janus_sector(self, section):
+    def janus_sector(self):
+        """
+        Fill in the Janus frame to get Janus file/directory to read, config file, parameter file, output file, and the input file type
+        """
         _path = Path().absolute().as_posix()
         self.file_type_var = ttk.StringVar(value='wav')
 
 
         # Add janus path row to labelframe 
         self.janus_path_var = ttk.StringVar(value=_path)
-        self.create_path_browser(section, "Janus Path (file/dir)", self.janus_path_var, include_dir=True)
+        self.create_path_browser("Janus Path (file/dir)", self.janus_path_var, include_dir=True)
         
 
         # # Add config path row to labelframe 
         self.config_path_var = ttk.StringVar(value=_path)
-        self.create_path_browser(section, "Config Path", self.config_path_var)
+        self.create_path_browser("Config Path", self.config_path_var)
 
         # Add parameter_sets path row to labelframe
         self.pset_path_var = ttk.StringVar(value=_path)
-        self.create_path_browser(section, "Parameter Path", self.pset_path_var)
+        self.create_path_browser("Parameter Path", self.pset_path_var)
 
         # CSV Output location and file picker
         self.csv_path_var = ttk.StringVar(value=_path)
-        self.create_path_browser(section, "CSV Output Path", self.csv_path_var)
+        self.create_path_browser("CSV Output Path", self.csv_path_var)
 
         option_list = ['Pick a file type', 'raw', 'wav','wmm']
-        self.file_type_run(section, option_list)
+        self.file_type_run(option_list)
 
-    def create_path_browser(self, master, text, text_var, include_dir=False):
+        self.create_progress()
+
+    def create_path_browser(self, text, text_var, include_dir=False):
+        """
+        Creates a frame row to capture input file (and directory)
+        - text: Descriptor text of the row
+        - text_var: Variable to store file/directory path
+        - include_dir: Flag whether or not to include search for directory
+        """
         # Instantiating widgets
-        row = ttk.Frame(master)
+        row = ttk.Frame(self)
         row_label = ttk.Label(row, text=text, width=15)
         row_entry = ttk.Entry(row, textvariable=text_var, width=10)
         
@@ -86,11 +102,13 @@ class JanusFrame(ttk.Labelframe):
             dir_btn.pack(side=LEFT, padx=3)
         return row_entry
 
-
-    # Setup buttons to actually run janus
-    def file_type_run(self, master, option_list):
+    def file_type_run(self, option_list):
+        """
+        Sets up row to run Janus demodulation and a guide on how to use the Janus frame
+        - option_list: Available options to pick from in a drop down menu
+        """
         # Instantiating widgets
-        row = ttk.Frame(master)
+        row = ttk.Frame(self)
         row.pack(fill=X, expand=NO, anchor=N, pady=(0,5))
         parameter_options = ttk.OptionMenu(row, self.file_type_var, 
                                             *option_list, bootstyle= INFO, 
@@ -112,19 +130,39 @@ class JanusFrame(ttk.Labelframe):
         parameter_options.pack(side=RIGHT, padx=3)
         help_btn.pack(side=RIGHT, padx=3)
 
+    def create_progress(self):
+        """
+        Sets up a hotbar when running a directory of files
+        """
+        row = ttk.Frame(self)
+        row.pack(fill=X, expand=YES, anchor=S, pady=(0,5), padx=(5,5))
+        self.progress_bar = ttk.Progressbar(master=row, mode=DETERMINATE)
+        self.progress_bar.pack(fill=X, expand=YES)
+
+    ### Call Back Functions ###
+
     def on_file_browse(self, path_var):
-        """Callback for directory browse"""
+        """
+        Callback for file browse
+        - path_var: the variable to update with the file path
+        """
         path = filedialog.askopenfilename(title="File Browse")
         if path:
             path_var.set(path)
+
     def on_folder_browse(self, path_var):
-        """Callback for directory browse"""
+        """
+        Callback for directory browse
+        - path_var: the variable to update with the directory path
+        """
         path = filedialog.askdirectory(title="Folder Browse")
         if path:
             path_var.set(path)
 
     def on_janus_run(self):
-
+        """
+        Checks to make sure all input variables are valid, then creates a new thread to run Janus demodulation
+        """
         # Check if we have a config file
         if os.path.isdir(self.config_path_var.get()) or not self.config_path_var.get().endswith('.conf'):
             self.show_message("Please pick an config file with .conf")
@@ -172,52 +210,13 @@ class JanusFrame(ttk.Labelframe):
                                 self.config_path_var.get(), self.csv_path_var.get()))
         thread.start()
             
-    def run_subprocess(self, exe_path, janus_path, pset_path, file_type, config_path, csv_path):
-        try:
-            if os.path.isdir(janus_path):
-                folder = Path(janus_path)  # or just 'path/to/folder'
-                wav_files = list(folder.glob('*.wav'))
-
-                # TODO: Do something with wav_files for progress bar
-
-
-                for wav_file in wav_files:
-                    run_arr = [exe_path, 
-                        "--pset-file", str(pset_path),
-                        "--config-file", str(config_path),
-                        "--stream-driver", str(file_type),
-                        "--stream-driver-args", str(wav_file)
-                                ] 
-                    result = subprocess.run(run_arr, 
-                                        capture_output=True, text=True)
-                    if result.returncode == 0:
-                        print(result.stderr)
-                        print(result.stdout)
-                        self.janus_out(result.stderr, os.path.basename(wav_file), csv_path)
-                    else:
-                        print(result.returncode)
-                        print("error: \n", result.stderr)
-            elif os.path.isfile(janus_path):
-                run_arr = [exe_path, 
-                "--pset-file", str(pset_path),
-                "--config-file", str(config_path),
-                "--stream-driver", str(file_type),
-                "--stream-driver-args", str(janus_path)
-                        ]
-                result = subprocess.run(run_arr, 
-                                        capture_output=True, text=True)
-                if result.returncode == 0:
-                    self.janus_out(result.stderr, os.path.basename(janus_path), csv_path)
-                else:
-                    print(result.returncode)
-                    print("error: \n", result.stderr)
-        except Exception as E: 
-            self.on_except(E)
-        finally:
-          self.processing_janus.release_lock()
-          print("done")
-
     def janus_out(self, result:str, file_name, out_csv):
+        """
+        Post processing of Janus RX to look for payload and SNR
+        - result: Janus RX executable output (from stderr)
+        - file_name: Input Janus file name
+        - out_csv: Output (.csv) file to store results
+        """
         in_payload = 0
         detect_time = 0.0
         with open(out_csv, "a+") as file:
@@ -266,8 +265,11 @@ class JanusFrame(ttk.Labelframe):
                     file.write(f"{file_name},{str(detect_time)},{payload_time},{payload_data},{payload_size},{snr}\n")
                 else:
                     file.write(f"{file_name},{str(detect_time)},,,,{snr},No data\n")
-    # Callback for updating file type
+
     def on_typing(self, file_type_var):
+        """
+        Handler to update file variable
+        """
         self.file_type_var = file_type_var
 
     def show_message(self,msg):
@@ -281,3 +283,59 @@ class JanusFrame(ttk.Labelframe):
         Displays an error window with the provided string.
         """
         messagebox.showerror("Error", str(E))
+
+    ### Ran on seperate thread ###
+
+    def run_subprocess(self, exe_path, janus_path, pset_path, file_type, config_path, csv_path):
+        """
+        Function to run on a new thread for Janus demodulation
+        - exe_path: Path to Janus executable
+        - janus_path: File/directory path to Janus RX files
+        - pset_path: File path to parameter (.csv) file
+        - file_type: File type of Janus RX files
+        - config_path: File path to config (.conf) file
+        - csv_path: File path to output (.csv) file
+        """
+        try:
+            if os.path.isdir(janus_path):
+                folder = Path(janus_path)
+                wav_files = list(folder.glob('*.wav'))
+
+                # TODO: Do something with wav_files for progress bar
+
+
+                for wav_file in wav_files:
+                    run_arr = [exe_path, 
+                        "--pset-file", str(pset_path),
+                        "--config-file", str(config_path),
+                        "--stream-driver", str(file_type),
+                        "--stream-driver-args", str(wav_file)
+                                ] 
+                    result = subprocess.run(run_arr, 
+                                        capture_output=True, text=True)
+                    if result.returncode == 0:
+                        print(result.stderr)
+                        print(result.stdout)
+                        self.janus_out(result.stderr, os.path.basename(wav_file), csv_path)
+                    else:
+                        print(result.returncode)
+                        print("error: \n", result.stderr)
+            elif os.path.isfile(janus_path):
+                run_arr = [exe_path, 
+                "--pset-file", str(pset_path),
+                "--config-file", str(config_path),
+                "--stream-driver", str(file_type),
+                "--stream-driver-args", str(janus_path)
+                        ]
+                result = subprocess.run(run_arr, 
+                                        capture_output=True, text=True)
+                if result.returncode == 0:
+                    self.janus_out(result.stderr, os.path.basename(janus_path), csv_path)
+                else:
+                    print(result.returncode)
+                    print("error: \n", result.stderr)
+        except Exception as E: 
+            self.on_except(E)
+        finally:
+          self.processing_janus.release_lock()
+          print("done")
