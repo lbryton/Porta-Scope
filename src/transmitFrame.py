@@ -170,6 +170,26 @@ class TransmitFrame(ttk.Labelframe):
         else:
             self.show_message("Still transmitting data")
         
+    # Pulls up file system for ease of locating file
+    def on_file_browse(self, path_var):
+        """
+        Callback for file browse
+        - path_var: the variable to update with the file path
+        """
+        path = filedialog.askopenfilename(title="File Browse")
+        if path:
+            path_var.set(path)
+
+    # Pulls up file system for ease of locating directory
+    def on_typing(self, gain_var):
+        """
+        Callback for updating gain
+        - gain_var: The new gain value
+        """
+        self.tx_gain = ttk.StringVar(value=gain_var)
+
+    ### Ran on seperate thread ###
+
     # Handles connection/interactions with server
     def handle_to_server(self, server_ip, server_port, transmit_file, tx_gain):
         """
@@ -225,26 +245,10 @@ class TransmitFrame(ttk.Labelframe):
         finally:
             client_socket.close()
             self.transmitting_data.release_lock()
-        
-    # Pulls up file system for ease of locating file
-    def on_file_browse(self, path_var):
-        """
-        Callback for file browse
-        - path_var: the variable to update with the file path
-        """
-        path = filedialog.askopenfilename(title="File Browse")
-        if path:
-            path_var.set(path)
 
-    # Pulls up file system for ease of locating directory
-    def on_typing(self, gain_var):
-        """
-        Callback for updating gain
-        - gain_var: The new gain value
-        """
-        self.tx_gain = ttk.StringVar(value=gain_var)
+    ### Error/message windows ###
 
-    def show_message(self,msg):
+    def show_message(self,msg = "Default message"):
         """
         Displays a message window with the provided string.
         """

@@ -122,7 +122,7 @@ class JanusFrame(ttk.Labelframe):
         help_btn = ttk.Button(
             master=row, 
             text="Help", 
-            command=None, 
+            command=self.on_help, 
             width=8
         )
         # Row orientation
@@ -148,6 +148,19 @@ class JanusFrame(ttk.Labelframe):
         if percent <= self.progress_bar.cget("maximum") and percent >= 0:
             self.progress_bar["value"] = percent * self.progress_bar.cget("maximum")
     ### Call Back Functions ###
+
+    def on_help(self):
+
+        config_flags = ["--verbose: Verbose level", "--pset-id: Parameter Set Identifier", "--chip-len-exp: Chip Length Dyadic Exponent", "--sequence-32-chips: Initial sequence of 32 chips (hex)",
+                        "--stream-fs: Stream Sampling Frequency (Hz)", "--stream-format: Stream Format", "--stream-channels: Stream Channels configuration", "--stream-channel: Stream Active Channel",
+                        "--stream-passband: Stream Passband signal", "--doppler-correctionEnabled/Disabled Doppler Correction", "--doppler-max-speed: Doppler Correction Maximum Speed [m/s]",
+                        "--detection-threshold: Detection threshold", "--colored-bit-probabilities Enable/Disable Colored Bit Probabilities", "--cbp-high2medium: CBP High to Medium Threshold", 
+                        "--cbp-medium2low: CBP Medium to Low Threshold"]
+        config_lines = "- Config Path: Path to Janus configuration path (each seperated by a newline)"
+        for flag in config_flags:
+            config_lines += f"\n    {flag}"
+        parameter_set_lines = "- Parameter Path: Path to Janus parameter set path (each seperated by a newline). Header is in the csv format of:\n    - \"# Id, Center Frequency (Hz), Bandwidth (Hz), Name\""
+        self.show_message(f"How to demodulate Janus file(s):\n- Janus Path: File or directory holding files to demodulate\n{config_lines}\n{parameter_set_lines}")
 
     def on_file_browse(self, path_var):
         """
@@ -280,18 +293,6 @@ class JanusFrame(ttk.Labelframe):
         """
         self.file_type_var = file_type_var
 
-    def show_message(self,msg):
-        """
-        Displays a message window with the provided string.
-        """
-        messagebox.showinfo("Information", msg)
-
-    def on_except(self, E):
-        """
-        Displays an error window with the provided string.
-        """
-        messagebox.showerror("Error", str(E))
-
     ### Ran on seperate thread ###
 
     def run_subprocess(self, exe_path, janus_path, pset_path, file_type, config_path, csv_path):
@@ -307,8 +308,9 @@ class JanusFrame(ttk.Labelframe):
         try:
             if os.path.isdir(janus_path):
                 folder = Path(janus_path)
-                wav_files = list(folder.glob('*.wav'))
+                wav_files = list(folder.glob(f"*.{file_type}"))
                 total_files = len(wav_files)
+                print(total_files)
 
                 for i in range(total_files):
                     run_arr = [exe_path, 
@@ -346,4 +348,19 @@ class JanusFrame(ttk.Labelframe):
             self.on_except(E)
         finally:
             self.processing_janus.release_lock()
-            print("done")
+            # print("done")
+
+    ### Error/message windows ###
+
+    def show_message(self,msg="Default message"):
+        """
+        Displays a message window with the provided string.
+        """
+        messagebox.showinfo("Information", msg)
+
+    def on_except(self, E):
+        """
+        Displays an error window with the provided string.
+        """
+        messagebox.showerror("Error", str(E))
+
