@@ -32,9 +32,9 @@ class JanusFrame(ttk.Labelframe):
     # Initalization of frame and connection lock
     def __init__(self, master:ttk.Frame):
         super().__init__(master, text="Janus Demodulation")
+        self.progress_bar = None
         self.janus_sector()
         self.processing_janus = Lock()
-        self.progress_bar = None
 
     ### Frame/Widget Instantiation ###
 
@@ -136,9 +136,17 @@ class JanusFrame(ttk.Labelframe):
         """
         row = ttk.Frame(self)
         row.pack(fill=X, expand=YES, anchor=S, pady=(0,5), padx=(5,5))
-        self.progress_bar = ttk.Progressbar(master=row, mode=DETERMINATE)
+        self.progress_bar = ttk.Progressbar(master=row, mode="determinate", maximum=100, value=0)
         self.progress_bar.pack(fill=X, expand=YES)
+        # print(self.progress_bar.cget("maximum"))
 
+    def update_progress(self, percent):
+        """
+        Updates progress bar when Janus is working on multiple files
+        - percent: The total progress of Janus demodulation anging from 0 to 1 (inclusive)
+        """
+        if percent <= self.progress_bar.cget("maximum") and percent >= 0:
+            self.progress_bar["value"] = percent * self.progress_bar.cget("maximum")
     ### Call Back Functions ###
 
     def on_file_browse(self, path_var):
@@ -300,26 +308,25 @@ class JanusFrame(ttk.Labelframe):
             if os.path.isdir(janus_path):
                 folder = Path(janus_path)
                 wav_files = list(folder.glob('*.wav'))
+                total_files = len(wav_files)
 
-                # TODO: Do something with wav_files for progress bar
-
-
-                for wav_file in wav_files:
+                for i in range(total_files):
                     run_arr = [exe_path, 
                         "--pset-file", str(pset_path),
                         "--config-file", str(config_path),
                         "--stream-driver", str(file_type),
-                        "--stream-driver-args", str(wav_file)
+                        "--stream-driver-args", str(wav_files[i])
                                 ] 
                     result = subprocess.run(run_arr, 
                                         capture_output=True, text=True)
                     if result.returncode == 0:
-                        print(result.stderr)
-                        print(result.stdout)
-                        self.janus_out(result.stderr, os.path.basename(wav_file), csv_path)
+                        # print(result.stderr)
+                        # print(result.stdout)
+                        self.janus_out(result.stderr, os.path.basename(wav_files[i]), csv_path)
                     else:
                         print(result.returncode)
                         print("error: \n", result.stderr)
+                    self.update_progress((i+1)/total_files)
             elif os.path.isfile(janus_path):
                 run_arr = [exe_path, 
                 "--pset-file", str(pset_path),
@@ -334,8 +341,9 @@ class JanusFrame(ttk.Labelframe):
                 else:
                     print(result.returncode)
                     print("error: \n", result.stderr)
+                self.update_progress(1)
         except Exception as E: 
             self.on_except(E)
         finally:
-          self.processing_janus.release_lock()
-          print("done")
+            self.processing_janus.release_lock()
+            print("done")

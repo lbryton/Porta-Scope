@@ -36,7 +36,6 @@ class PortaScope(ttk.Frame):
         self.master.columnconfigure(0, weight=1)
         self.prev_height = self.master.winfo_height()
         self.prev_width = self.master.winfo_width()
-        self.cnt = 0
         self.current_selection = 1
 
         # Setup 2x2 grid inside this frame + header on 
@@ -156,7 +155,6 @@ class PortaScope(ttk.Frame):
         """
         if self.current_selection == select_window:
             return
-        print(select_window)
 
         if self.sections[self.current_selection].winfo_ismapped():
             self.sections[self.current_selection].grid_remove()
@@ -182,8 +180,6 @@ class PortaScope(ttk.Frame):
             
             # Check if the height/width is updated
             if event.widget.winfo_width() != self.prev_width or event.widget.winfo_height() != self.prev_height:
-                print(f"size_update {self.cnt}")
-                self.cnt += 1
                 self.prev_height = event.widget.winfo_height()
                 self.prev_width = event.widget.winfo_width()
                 self.update_height(self.prev_width, self.prev_height)

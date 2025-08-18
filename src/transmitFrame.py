@@ -196,9 +196,7 @@ class TransmitFrame(ttk.Labelframe):
                 # Get file size and gain for header
                 file_size = os.path.getsize(transmit_file)
                 header = f"{file_size};{tx_gain}"
-                # print(f"Header: {header}")
                 client_socket.sendall(header.encode())
-                # print(file_size)
 
                 # Wait for server acknowledgement of header
                 ack = client_socket.recv(64).decode()
